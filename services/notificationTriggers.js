@@ -17,7 +17,24 @@ export const NotificationTriggers = {
     await NotificationService.createNotification(notification);
     await PushNotificationService.showLocalNotification(
       "New Project",
-      `You have been assigned to: ${project.name}`
+      `You have been assigned to: ${project.name}`,
+    );
+  },
+  // Project update hone par
+  onProjectUpdated: async (project, updatedBy) => {
+    const notification = {
+      user_id: project.assigned_to,
+      title: "Project Updated",
+      message: `Project "${project.name}" has been updated by ${updatedBy.name}`,
+      type: "info",
+      related_entity_type: "project",
+      related_entity_id: project.id,
+    };
+
+    await NotificationService.createNotification(notification);
+    await PushNotificationService.showLocalNotification(
+      "Project Updated",
+      `Project "${project.name}" updated by ${updatedBy.name}`,
     );
   },
 
@@ -43,36 +60,31 @@ export const NotificationTriggers = {
   // Overtime submit hone par
   onOvertimeSubmitted: async (overtime, submittedBy) => {
     // Sab managers ko notification
-    const managers = await EmployeesService.getManagers(); // YEH CHANGE KAREIN
-    console.log("managers", managers);
-    for (const manager of managers) {
-      console.log("manager id : ", manager.id);
-      const notification = {
-        user_id: manager.id,
-        title: "Overtime Request",
-        message: `${submittedBy.name} has submitted an overtime request for ${overtime.total_hours} hours`,
-        type: "warning",
-        related_entity_type: "overtime",
-        related_entity_id: overtime.id,
-      };
 
-      await NotificationService.createNotification(notification);
+    const notification = {
+      user_id: submittedBy.id,
+      title: "Overtime Request",
+      message: `${submittedBy.name} has submitted an overtime request for ${overtime.total_hours} hours`,
+      type: "warning",
+      related_entity_type: "overtime",
+      related_entity_id: overtime.id,
+    };
 
-      // Push notification bhi bhejein
-      await PushNotificationService.showLocalNotification(
-        "Overtime Request",
-        `${submittedBy.name} submitted ${overtime.total_hours} hours overtime`
-      );
-    }
+    await NotificationService.createNotification(notification);
+
+    // Push notification bhi bhejein
+    await PushNotificationService.showLocalNotification(
+      "Overtime Request",
+      `${submittedBy.name} submitted ${overtime.total_hours} hours overtime`,
+    );
   },
-
   // Overtime approve/reject hone par
   onOvertimeStatusChanged: async (overtime, status, approvedBy) => {
     const notification = {
       user_id: overtime.employee_id,
       title: "Overtime Request Updated",
       message: `Your overtime request has been ${status} by ${approvedBy.name}`,
-      type: status === "approved" ? "success" : "error",
+      type: status === "approved" ? "success" : "rejected",
       related_entity_type: "overtime",
       related_entity_id: overtime.id,
     };
@@ -80,7 +92,7 @@ export const NotificationTriggers = {
     await NotificationService.createNotification(notification);
     await PushNotificationService.showLocalNotification(
       "Overtime Status",
-      `Your overtime request has been ${status}`
+      `Your overtime request has been ${status}`,
     );
   },
 
@@ -117,7 +129,7 @@ export const NotificationTriggers = {
     await NotificationService.createNotification(notification);
     await PushNotificationService.showLocalNotification(
       "Deadline Alert",
-      `Project "${project.name}" due in ${daysLeft} days`
+      `Project "${project.name}" due in ${daysLeft} days`,
     );
   },
 };

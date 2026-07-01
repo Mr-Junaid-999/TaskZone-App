@@ -5,6 +5,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 export default function ProjectCard({
   project,
   onPress,
+  isManager,
   onDelete,
   onStatusChange,
   showActions = false,
@@ -76,7 +77,7 @@ export default function ProjectCard({
         borderLeftWidth: 4,
         borderLeftColor: getPriorityColor(project.priority),
       }}
-      onPress={onPress}
+      onPress={isManager ? onPress : null}
     >
       {/* Header with actions */}
       <View
@@ -122,7 +123,7 @@ export default function ProjectCard({
           </TouchableOpacity>
 
           {/* Action Buttons */}
-          {showActions && (
+          {showActions && isManager && project.status !== "completed" && (
             <TouchableOpacity
               onPress={(e) => {
                 e.stopPropagation();
@@ -194,12 +195,6 @@ export default function ProjectCard({
           >
             {project.priority} priority
           </Text>
-
-          {project.employees && (
-            <Text style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-              Assigned to: {project.employees.name}
-            </Text>
-          )}
         </View>
 
         {project.deadline && (
@@ -218,86 +213,3 @@ export default function ProjectCard({
     </TouchableOpacity>
   );
 }
-// import { Text, TouchableOpacity, View } from "react-native";
-
-// export default function ProjectCard({ project, onPress }) {
-//   const getStatusColor = (status) => {
-//     switch (status) {
-//       case "completed":
-//         return "bg-green-500";
-//       case "in progress":
-//         return "bg-yellow-500";
-//       case "pending":
-//         return "bg-gray-400";
-//       default:
-//         return "bg-gray-400";
-//     }
-//   };
-
-//   return (
-//     <TouchableOpacity
-//       className="bg-white p-4 rounded-lg shadow-sm mb-3 border border-gray-200"
-//       onPress={onPress}
-//     >
-//       <View className="flex-row justify-between items-start mb-2">
-//         <Text className="text-lg font-bold text-blue-600 flex-1 mr-2">
-//           {project.name}
-//         </Text>
-//         <View className={`px-2 py-1 rounded ${getStatusColor(project.status)}`}>
-//           <Text className="text-white text-xs font-medium capitalize">
-//             {project.status}
-//           </Text>
-//         </View>
-//       </View>
-
-//       {project.description && (
-//         <Text className="text-gray-600 text-sm mb-2">
-//           {project.description}
-//         </Text>
-//       )}
-
-//       {project.requirements && (
-//         <View className="bg-blue-50 p-2 rounded mb-2">
-//           <Text className="text-sm font-semibold text-blue-600 mb-1">
-//             Requirements:
-//           </Text>
-//           <Text className="text-sm text-gray-700">{project.requirements}</Text>
-//         </View>
-//       )}
-
-//       <View className="flex-row justify-between items-center mt-2">
-//         <Text
-//           className={`text-sm font-medium ${
-//             project.priority === "high"
-//               ? "text-red-600"
-//               : project.priority === "medium"
-//               ? "text-yellow-600"
-//               : "text-green-600"
-//           }`}
-//         >
-//           {project.priority} priority
-//         </Text>
-//         {project.deadline && (
-//           <Text className="text-sm text-gray-500">
-//             Due: {new Date(project.deadline).toLocaleDateString()}
-//           </Text>
-//         )}
-//       </View>
-
-//       {/* Manual employee data */}
-//       {project.assigned_to_employee && (
-//         <Text className="text-sm text-gray-600 mt-2">
-//           Assigned to: {project.assigned_to_employee.name}
-//           {project.assigned_to_employee.department &&
-//             ` (${project.assigned_to_employee.department})`}
-//         </Text>
-//       )}
-
-//       {project.created_by_employee && (
-//         <Text className="text-xs text-gray-500 mt-1">
-//           Created by: {project.created_by_employee.name}
-//         </Text>
-//       )}
-//     </TouchableOpacity>
-//   );
-// }

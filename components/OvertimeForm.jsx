@@ -18,6 +18,7 @@ export default function OvertimeForm({
   loading = false,
   initialData = null,
   isEdit = false,
+  isManager,
 }) {
   const [formData, setFormData] = useState({
     project_id: "",
@@ -129,7 +130,7 @@ export default function OvertimeForm({
         >
           {/* Project Selection */}
           <View style={styles.section}>
-            <Text style={styles.label}>Project (Optional)</Text>
+            <Text style={styles.label}>Project </Text>
             <View style={styles.projectContainer}>
               <ScrollView
                 horizontal
@@ -223,28 +224,61 @@ export default function OvertimeForm({
           {/* Status Selection */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Status</Text>
-            <View style={styles.statusOptions}>
-              {["rejected", "pending", "approved"].map((status) => (
-                <TouchableOpacity
-                  key={status}
-                  style={[
-                    styles.statusOption,
-                    formData.status === status && styles.statusOptionSelected,
-                  ]}
-                  onPress={() => setFormData({ ...formData, status: status })}
-                >
-                  <Text
+            {isManager && (
+              <View style={styles.statusOptions}>
+                {["rejected", "pending", "approved"].map((status) => (
+                  <TouchableOpacity
+                    key={status}
                     style={[
-                      styles.statusOptionText,
-                      formData.status === status &&
-                        styles.statusOptionTextSelected,
+                      styles.statusOption,
+                      formData.status === status && styles.statusOptionSelected,
                     ]}
+                    onPress={() => setFormData({ ...formData, status: status })}
                   >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <Text
+                      style={[
+                        styles.statusOptionText,
+                        formData.status === status &&
+                          styles.statusOptionTextSelected,
+                      ]}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {!isManager && (
+              <View style={styles.statusOptions}>
+                {["pending", "approved", "rejected"].map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[
+                      styles.statusOption,
+                      status === "pending" && styles.statusOptionSelected,
+                      status !== "pending" && styles.statusOptionDisabled,
+                    ]}
+                    onPress={() => {
+                      // Only allow pending
+                      if (status === "pending") {
+                        setFormData({ ...formData, status: status });
+                      }
+                    }}
+                    disabled={status !== "pending"}
+                  >
+                    <Text
+                      style={[
+                        styles.statusOptionText,
+                        status === "pending" && styles.statusOptionTextSelected,
+                        status !== "pending" && styles.statusOptionTextDisabled,
+                      ]}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Notes */}
@@ -284,8 +318,8 @@ export default function OvertimeForm({
                 loading
                   ? "Processing..."
                   : isEdit
-                  ? "Update Overtime Request"
-                  : "Submit Overtime Request"
+                    ? "Update Overtime Request"
+                    : "Submit Overtime Request"
               }
               onPress={handleSubmit}
               variant="primary"

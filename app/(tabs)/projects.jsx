@@ -44,6 +44,9 @@ export default function ProjectsScreen() {
 
   const loadData = async () => {
     try {
+      const { isManager } = await ProjectsService.getuserid();
+      setIsManager(isManager);
+
       const [projectsData, employeesData] = await Promise.all([
         ProjectsService.getUserProjects(),
         EmployeesService.getAllEmployees(),
@@ -51,10 +54,6 @@ export default function ProjectsScreen() {
 
       setProjects(projectsData);
       setEmployees(employeesData);
-
-      // Check if user is manager
-      const stats = await ProjectsService.getProjectStatistics();
-      setIsManager(stats.total > 0); // Simple check - if user can see all projects
     } catch (error) {
       console.error("Error loading data:", error);
       Alert.alert("Error", "Failed to load data");
@@ -88,17 +87,10 @@ export default function ProjectsScreen() {
   };
 
   const handleEditProject = (project) => {
-    if (!project.assigned_to) {
-      Alert.alert("Please Assignd task to someone employee");
-
-      return;
-    }
-
     setProjectForm({
       name: project.name,
       description: project.description || "",
       requirements: project.requirements || "",
-      assigned_to: project.assigned_to,
       deadline: project.deadline || "",
       status: project.status,
       priority: project.priority,
@@ -155,7 +147,7 @@ export default function ProjectsScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -192,37 +184,16 @@ export default function ProjectsScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>
-              {isManager ? "All Projects" : "My Projects"}
-            </Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddProject}
-            >
-              <Text style={styles.addButtonText}>+ Add Project</Text>
-            </TouchableOpacity>
+            <Text style={styles.title}>All Projects</Text>
+            {isManager && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleAddProject}
+              >
+                <Text style={styles.addButtonText}>+ Add Project</Text>
+              </TouchableOpacity>
+            )}
           </View>
-
-          {/* Quick Actions */}
-          {/* {isManager && (
-            <View style={styles.quickActions}>
-              <Text style={styles.quickActionsTitle}>Quick Actions</Text>
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => setShowModal(true)}
-                >
-                  <Text style={styles.actionButtonText}>Create Project</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={loadData}
-                >
-                  <Text style={styles.actionButtonText}>Refresh</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )} */}
 
           {/* In Progress Projects */}
           <View style={styles.section}>
@@ -238,6 +209,7 @@ export default function ProjectsScreen() {
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  isManager={isManager}
                   onPress={() => handleEditProject(project)}
                   onDelete={() => handleDeleteProject(project)}
                   onStatusChange={(newStatus) =>
@@ -263,6 +235,7 @@ export default function ProjectsScreen() {
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  isManager={isManager}
                   onPress={() => handleEditProject(project)}
                   onDelete={() => handleDeleteProject(project)}
                   onStatusChange={(newStatus) =>
@@ -288,8 +261,8 @@ export default function ProjectsScreen() {
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  onPress={() => handleEditProject(project)}
-                  onDelete={() => handleDeleteProject(project)}
+                  // onPress={() => handleEditProject(project)}
+                  // onDelete={() => handleDeleteProject(project)}
                   onStatusChange={(newStatus) =>
                     handleStatusChange(project.id, newStatus)
                   }
@@ -492,7 +465,7 @@ export default function ProjectsScreen() {
                         {status.charAt(0).toUpperCase() + status.slice(1)}
                       </Text>
                     </TouchableOpacity>
-                  )
+                  ),
                 )}
               </View>
             </View>

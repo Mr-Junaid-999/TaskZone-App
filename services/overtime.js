@@ -6,14 +6,50 @@ let user_id;
 
 export const OvertimeService = {
   async getuserid() {
-    const { data: authUser } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from("employees")
-      .select()
-      .eq("email", authUser.user.email);
-    user_id = data[0].id;
+    try {
+      const { data: authUser, error: authError } =
+        await supabase.auth.getUser();
 
-    if (error) throw error;
+      if (authError) {
+        throw new Error("Authentication failed");
+      }
+
+      if (!authUser?.user?.email) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data, error } = await supabase
+        .from("employees")
+        .select("*")
+        .eq("email", authUser.user.email);
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error("Employee not found");
+      }
+
+      user_id = data[0].id;
+
+      const { data: managerCheck, error: managerError } = await supabase
+        .from("departments")
+        .select("manager_id")
+        .eq("manager_id", data[0].id)
+        .single();
+
+      if (managerError && managerError.code !== "PGRST116") {
+        throw managerError;
+      }
+
+      return {
+        isManager: !!managerCheck,
+      };
+    } catch (error) {
+      console.error("Error in getuserid:", error);
+      throw error;
+    }
   },
 
   async submitOvertime(overtimeData) {
@@ -79,8 +115,6 @@ export const OvertimeService = {
       .single();
 
     const isManager = !!managerCheck;
-    console.log("User ID:", user_id);
-    console.log("Is user a manager?", isManager);
 
     let query;
     if (isManager) {
@@ -97,7 +131,17 @@ export const OvertimeService = {
     }
     // If not manager, only show user's overtime requests
     if (!isManager) {
-      query = query.eq("employee_id", user_id);
+      query = supabase
+        .from("overtime_requests")
+        .select(
+          `
+        *,
+        projects(name),
+        employees!overtime_requests_approved_by_fkey(name, email)
+      `,
+        )
+        .order("overtime_date", { ascending: false })
+        .eq("employee_id", user_id);
     }
 
     const { data, error } = await query;
@@ -129,21 +173,21 @@ export const OvertimeService = {
 
   async updateOvertimeStatus(requestId, status, notes = "") {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("No user found");
 
       // Current user (manager) ka data get karein
       const { data: currentUser } = await supabase
         .from("employees")
         .select("*")
-        .eq("id", user_id)
+        .eq("email", authUser.user.email)
         .single();
 
       const { data, error } = await supabase
         .from("overtime_requests")
         .update({
           status,
-          approved_by: user_id,
+          approved_by: currentUser.id,
           approved_at: new Date().toISOString(),
           notes,
         })
@@ -205,14 +249,19 @@ export const OvertimeService = {
   },
 
   async updateOvertimeRequest(requestId, updates) {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user) throw new Error("No user found");
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser) throw new Error("No user found");
+
+    const { data: currentUser } = await supabase
+      .from("employees")
+      .select("*")
+      .eq("email", authUser.user.email)
+      .single();
     // Verify the request belongs to the current user and is pending
     const { data: existingRequest, error: fetchError } = await supabase
       .from("overtime_requests")
       .select("*")
       .eq("id", requestId)
-      .eq("employee_id", user_id)
       .eq("status", "pending")
       .single();
 
@@ -224,9 +273,19 @@ export const OvertimeService = {
       .from("overtime_requests")
       .update({
         ...updates,
+        approved_by: currentUser.id, // Reset approved_by if the request is edited
       })
       .eq("id", requestId)
       .select();
+
+    // NOTIFICATION TRIGGER ADD KAREIN
+    if (data && data[0]) {
+      await NotificationTriggers.onOvertimeStatusChanged(
+        data[0],
+        updates.status,
+        currentUser,
+      );
+    }
 
     if (error) throw error;
     return data;

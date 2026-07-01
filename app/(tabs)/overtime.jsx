@@ -23,6 +23,7 @@ export default function OvertimeScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [editingOvertime, setEditingOvertime] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -30,12 +31,13 @@ export default function OvertimeScreen() {
 
   const loadData = async () => {
     try {
-      await OvertimeService.getuserid();
+      const { isManager } = await OvertimeService.getuserid();
+      setIsManager(isManager);
+
       const [overtimeData, projectsData] = await Promise.all([
         OvertimeService.getUserOvertime(),
         ProjectsService.getUserProjects(),
       ]);
-      console.log("overtimeData", overtimeData);
       setOvertimeRequests(overtimeData);
       setProjects(projectsData);
     } catch (error) {
@@ -55,7 +57,6 @@ export default function OvertimeScreen() {
   const handleSubmitOvertime = async (overtimeData) => {
     setSubmitting(true);
     try {
-      console.log("Submitting overtime:", overtimeData);
       await OvertimeService.getuserid();
       await OvertimeService.submitOvertime(overtimeData);
       setShowModal(false);
@@ -65,7 +66,7 @@ export default function OvertimeScreen() {
       console.error("Error submitting overtime:", error);
       Alert.alert(
         "Error",
-        error.message || "Failed to submit overtime request"
+        error.message || "Failed to submit overtime request",
       );
     } finally {
       setSubmitting(false);
@@ -77,7 +78,7 @@ export default function OvertimeScreen() {
     if (request.status !== "pending") {
       Alert.alert(
         "Cannot Edit",
-        "Only pending overtime requests can be edited. Please contact your manager for approved/rejected requests."
+        "Only pending overtime requests can be edited. Please contact your manager for approved/rejected requests.",
       );
       return;
     }
@@ -99,7 +100,7 @@ export default function OvertimeScreen() {
     try {
       await OvertimeService.updateOvertimeRequest(
         editingOvertime.id,
-        overtimeData
+        overtimeData,
       );
       setShowEditModal(false);
       setEditingOvertime(null);
@@ -109,7 +110,7 @@ export default function OvertimeScreen() {
       console.error("Error updating overtime:", error);
       Alert.alert(
         "Error",
-        error.message || "Failed to update overtime request"
+        error.message || "Failed to update overtime request",
       );
     } finally {
       setSubmitting(false);
@@ -118,11 +119,10 @@ export default function OvertimeScreen() {
 
   // Delete overtime request
   const handleDeleteOvertime = (request) => {
-    console.log("request", request);
     if (request.status !== "pending") {
       Alert.alert(
         "Cannot Delete",
-        "Only pending overtime requests can be deleted. Please contact your manager for approved/rejected requests."
+        "Only pending overtime requests can be deleted. Please contact your manager for approved/rejected requests.",
       );
       return;
     }
@@ -146,7 +146,7 @@ export default function OvertimeScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -168,11 +168,11 @@ export default function OvertimeScreen() {
         `${
           request.approved_at
             ? `Approved on: ${new Date(
-                request.approved_at
+                request.approved_at,
               ).toLocaleDateString()}`
             : ""
         }`,
-      [{ text: "OK" }]
+      [{ text: "OK" }],
     );
   };
 
@@ -210,7 +210,7 @@ export default function OvertimeScreen() {
     const approved = getOvertimeByStatus("approved");
     return approved.reduce(
       (sum, ot) => sum + parseFloat(ot.total_hours || 0),
-      0
+      0,
     );
   };
 
@@ -234,12 +234,14 @@ export default function OvertimeScreen() {
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Overtime Tracking</Text>
-            <Pressable
-              style={styles.submitButton}
-              onPress={() => setShowModal(true)}
-            >
-              <Text style={styles.submitButtonText}>Submit Overtime</Text>
-            </Pressable>
+            {isManager && (
+              <Pressable
+                style={styles.submitButton}
+                onPress={() => setShowModal(true)}
+              >
+                <Text style={styles.submitButtonText}>Submit Overtime</Text>
+              </Pressable>
+            )}
           </View>
 
           {/* Overtime Summary */}
@@ -307,7 +309,7 @@ export default function OvertimeScreen() {
                         styles.statusBadge,
                         {
                           backgroundColor: getStatusBackgroundColor(
-                            request.status
+                            request.status,
                           ),
                         },
                       ]}
@@ -344,7 +346,7 @@ export default function OvertimeScreen() {
                     </View>
                   )}
 
-                  {request.approved_by && (
+                  {request.approved_by && request.status === "approved" && (
                     <View style={styles.approvedContainer}>
                       <Text style={styles.approvedByText}>
                         Approved by: {request.employees?.name}
@@ -392,6 +394,7 @@ export default function OvertimeScreen() {
         visible={showModal}
         onClose={() => setShowModal(false)}
         onSubmit={handleSubmitOvertime}
+        isManager={isManager}
         loading={submitting}
       />
 
@@ -406,6 +409,7 @@ export default function OvertimeScreen() {
         loading={submitting}
         initialData={editingOvertime}
         isEdit={true}
+        isManager={isManager}
       />
     </View>
   );
